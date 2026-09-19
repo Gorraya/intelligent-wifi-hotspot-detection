@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hotspot_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hotspot_detection
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hotspot_backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/hotspot_detection
+      DATABASE_URL_SYNC: postgresql://postgres:postgres@db:5432/hotspot_detection
+      SECRET_KEY: super-secret-key-change-in-production-please-make-it-long
+      DEBUG: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Agent is better run on host network for real packet capture.
+  # For demo/testing we can run it in container with limited capability.
+  agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+    container_name: hotspot_agent
+    network_mode: host
+    environment:
+      NETWORK_INTERFACE: eth0
+      BACKEND_URL: http://127.0.0.1:8000/api/v1/events/ingest
+      SENSITIVITY: balanced
+      MODEL_PATH: ml/models/hotspot_rf.joblib
+      LOG_LEVEL: INFO
+    depends_on:
+      - backend
+    restart: unless-stopped
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    volumes:
+      - ./agent:/app
+
+volumes:
+  postgres_data:
