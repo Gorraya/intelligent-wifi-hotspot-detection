@@ -165,3 +165,12 @@ If a user enables MAC filtering on their router:
 ## License
 
 This project was developed as a Final Year Project and can be extended for research or commercial use.
+
+## Author
+
+Developed by **M Hammad Ishaq** as a Final Year Project.
+
+- GitHub: https://github.com/Gorraya/intelligent-wifi-hotspot-detection
+- Project: Intelligent Wi-Fi Hotspot Sharing Detection using Machine Learning
+
+© 2026 Gorraya. All rights reserved for the original implementation and documentation.
